@@ -1,4 +1,4 @@
-# lambda-lifecycle-management
+# aws-manage-lifecycles
 
 This repo contains Node.js functionality to manage lifecycles of AWS EC2 instances using policies specified in tags. Supplemental scripts create and upload the code into AWS Lambda and schedule it to run hourly.
 
