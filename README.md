@@ -24,7 +24,7 @@ EC2 instance lifecycle policies are specified by tagging EC2 instances with a ta
     * Cycle this instance daily, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region.
     * If [on-hour] > [off-hour] then this is interpreted that the instance should be running overnight. E.g., cycle-daily:20;4 would turn on the instance at 8pm and off at 4am.
     * If [on-hour] == [off-hour], the policy is non-sensical and nothing is done.
-  * **cycle-weekday:[on-hour],[off-hour]**
+  * **cycle-weekday:[on-hour];[off-hour]**
     * Cycle this instance on weekdays, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region. Instances remain off on weekends.
     * If [on-hour] > [off-hour], nothing is done.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
