@@ -268,23 +268,6 @@ $ ./go-show-role.sh
         "Statement": [
             {
                 "Action": [
-                    "ses:SendEmail"
-                ],
-                "Resource": "*",
-                "Effect": "Allow",
-                "Sid": "Stmt1466617229994"
-            }
-        ]
-    },
-    "PolicyName": "SendEmail"
-}
-{
-    "RoleName": "manage-lifecycle-lambda",
-    "PolicyDocument": {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": [
                     "ec2:StartInstances",
                     "ec2:StopInstances",
                     "ec2:TerminateInstances"
