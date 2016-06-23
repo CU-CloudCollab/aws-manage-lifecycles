@@ -10,13 +10,9 @@ source ./constants.sh
 ./go-upload.sh
 
 # create/update lamda function
-
 aws lambda update-function-code \
   --function-name $LAMBDA_NAME \
   --s3-bucket $S3BUCKET \
   --s3-key $CODE_ZIPFILE
 # [--s3-object-version <value>]
 #[--publish | --no-publish]
-
-# http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/RunLambdaSchedule.html
-# create update schedule

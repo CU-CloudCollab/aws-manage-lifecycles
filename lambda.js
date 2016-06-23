@@ -1,15 +1,18 @@
 'use strict';
 
-// misc. constants
-var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
-var POLICY_TAG_NAME = "lifecycle-policy";
+// Constants used to customize the configuration of your deployment.
+// You MUST update these according to your situation.
 var EMAIL_FROM_ADDRESS = "cloud-support@cornell.edu";
-var POLICY_SYNTAX_SEPARATOR_PRIMARY = ":";
-var POLICY_SYNTAX_SEPARATOR_SECONDARY = ";";
 var MOMENT_TIMEZONE = "America/New_York";
 
 // Are instance stop/start/terminate dry runs?
-var DRY_RUN = false;
+var DRY_RUN = true;
+
+// misc. constants
+var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
+var POLICY_TAG_NAME = "lifecycle-policy";
+var POLICY_SYNTAX_SEPARATOR_PRIMARY = ":";
+var POLICY_SYNTAX_SEPARATOR_SECONDARY = ";";
 
 // policy names
 var POLICY_LIMIT_STOP = "limit-stop";

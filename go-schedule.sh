@@ -6,12 +6,10 @@
 # setup environment
 source ./constants.sh
 
-# You can reset the schedule to 'rate(5 minutes)' for testing purposes.
-
 tempfile=$(mktemp)
 aws events put-rule \
   --name $SCHEDULE_RULE \
-  --schedule-expression 'cron(5 * * * ? *)' \
+  --schedule-expression $LAMBDA_SCHEDULE \
   --state ENABLED \
   --description "Schedule for invoking $LAMBDA_NAME Lamada function." \
   > $tempfile
