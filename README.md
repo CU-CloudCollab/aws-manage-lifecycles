@@ -66,21 +66,21 @@ These instructions will get you setup to customize and deploy this functionality
   1. Select "Custom Policy"
   1. Set "Policy Name" to "SendEmail".
   1. Paste the following policy as the Policy Document:
-    ```
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": [
-                    "ses:SendEmail"
-                ],
-                "Resource": "*",
-                "Effect": "Allow",
-                "Sid": "Stmt1466617229994"
-            }
-        ]
-    }
-    ```
+  ```
+  {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Action": [
+                  "ses:SendEmail"
+              ],
+              "Resource": "*",
+              "Effect": "Allow",
+              "Sid": "Stmt1466617229994"
+          }
+      ]
+  }
+  ```
   1. Click "Apply Policy".
   1. Repeat the process to add another inline policy with name "StopStartTerminateEC2Instances" and policy document as follows:
   ```
@@ -116,25 +116,25 @@ These instructions will get you setup to customize and deploy this functionality
     * "lifecycle-policy=limit-stop:0"
     * "lifecycle-policy=limit-email:0;yourself@example.com"
 1. Invoke lambda.js once locally, using the run-local.js wrapper:
-  ```
-  $ node run-local.sj
-  ```
+ ```
+ $ node run-local.sj
+ ```
 1. Review local output and check your EC2 instances to see the results of the policies.
 
 **Create and configure the Lambda function**
 
 1. Create the Lambda function:
-  ```
-  $ ./go-create.sh
-  ```
+ ```
+ $ ./go-create.sh
+ ```
 2. Set the schedule for the function:
-  ```
-  $ ./go-schedule.sh
-  ```
+ ```
+ $ ./go-schedule.sh
+ ```
 3. Optionally, invoke the function the run in AWS immediately:
-  ```  
-  $ ./go-invoke.sh
-  ```
+ ```  
+ $ ./go-invoke.sh
+ ```
 4. Check the output of your Lambda function.
   1. In the AWS Console, navigate to you Lambda function.
   1. Click on the "Monitoring" tab.
