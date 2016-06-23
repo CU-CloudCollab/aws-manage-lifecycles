@@ -117,7 +117,7 @@ These instructions will get you setup to customize and deploy this functionality
     * "lifecycle-policy=limit-email:0;yourself@example.com"
 1. Invoke lambda.js once locally, using the run-local.js wrapper:
  ```
- $ node run-local.sj
+ $ node run-local.js
  ```
 1. Review local output and check your EC2 instances to see the results of the policies.
 
@@ -180,6 +180,8 @@ $ ./go-schedule.sh
 
 **go-invoke.sh** allows you to manually invoke the lambda.js functionality on Lambda
 
+**go-show-role.sh** shows configuration of the role you are assigning to the Lmabda function. Be sure to set `ROLE_NAME` in the script to be the name you used.
+
 ## Dependencies for Development
 
 These scripts expect the following on your development workstation:
@@ -196,10 +198,10 @@ These scripts expect the following on your development workstation:
 
 **S3.** These scripts expect an S3 bucket has already been created to use as the target for the Lambda code package. In running these scripts you need enough privileges on S3 of that bucket to create and update objects in it.
 
-**IAM Role.** The IAM role referenced in these scripts is a role that attaches AWSLambdaBasicExecutionRole, AmazonEC2ReadOnlyAccess, and defines inline policies SendEmail, and StopStartTerminateEC2Instances. The scripts included in this repo DO NOT define these. You will have to create them yourself.
+**IAM Role.** The IAM role referenced in these scripts is a role that attaches AWSLambdaBasicExecutionRole, AmazonEC2ReadOnlyAccess, and defines inline policies SendEmail, and StopStartTerminateEC2Instances. The scripts included in this repo DO NOT define these. You will have to create them yourself. Use the go-show-role.sh script to confirm that your role looks like the following:
 
 ```
-$ aws iam get-role --role-name pea1-lambda-automanage
+$ ./go-show-role.sh
 {
     "Role": {
         "AssumeRolePolicyDocument": {
@@ -214,15 +216,13 @@ $ aws iam get-role --role-name pea1-lambda-automanage
                 }
             ]
         },
-        "RoleId": "AROAIE5FAEQ4AFRTAJJZ2",
-        "CreateDate": "2016-06-21T19:19:56Z",
-        "RoleName": "pea1-lambda-automanage",
+        "RoleId": "AROAJHLL5RCZQQ6BHRG4G",
+        "CreateDate": "2016-06-23T13:50:08Z",
+        "RoleName": "manage-lifecycle-lambda",
         "Path": "/",
-        "Arn": "arn:aws:iam::225162606092:role/pea1-lambda-automanage"
+        "Arn": "arn:aws:iam::225162606092:role/manage-lifecycle-lambda"
     }
 }
-
-$ aws iam list-attached-role-policies --role-name pea1-lambda-automanage
 {
     "AttachedPolicies": [
         {
@@ -235,18 +235,14 @@ $ aws iam list-attached-role-policies --role-name pea1-lambda-automanage
         }
     ]
 }
-
-$ aws iam list-role-policies --role-name pea1-lambda-automanage
 {
     "PolicyNames": [
         "SendEmail",
         "StopStartTerminateEC2Instances"
     ]
 }
-
-$ aws iam get-role-policy --role-name pea1-lambda-automanage --policy-name SendEmail
 {
-    "RoleName": "pea1-lambda-automanage",
+    "RoleName": "manage-lifecycle-lambda",
     "PolicyDocument": {
         "Version": "2012-10-17",
         "Statement": [
@@ -262,10 +258,25 @@ $ aws iam get-role-policy --role-name pea1-lambda-automanage --policy-name SendE
     },
     "PolicyName": "SendEmail"
 }
-
-$ aws iam get-role-policy --role-name pea1-lambda-automanage --policy-name StopStartTerminateEC2Instances
 {
-    "RoleName": "pea1-lambda-automanage",
+    "RoleName": "manage-lifecycle-lambda",
+    "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "ses:SendEmail"
+                ],
+                "Resource": "*",
+                "Effect": "Allow",
+                "Sid": "Stmt1466617229994"
+            }
+        ]
+    },
+    "PolicyName": "SendEmail"
+}
+{
+    "RoleName": "manage-lifecycle-lambda",
     "PolicyDocument": {
         "Version": "2012-10-17",
         "Statement": [
@@ -275,13 +286,11 @@ $ aws iam get-role-policy --role-name pea1-lambda-automanage --policy-name StopS
                     "ec2:StopInstances",
                     "ec2:TerminateInstances"
                 ],
-                "Resource": "arn:aws:ec2:*:225162606092:instance/*",
+                "Resource": "arn:aws:ec2:*:*:instance/*",
                 "Effect": "Allow",
                 "Sid": "Stmt1466617309959"
             }
         ]
     },
     "PolicyName": "StopStartTerminateEC2Instances"
-}
-
-```
+}```

@@ -9,7 +9,7 @@ source ./constants.sh
 tempfile=$(mktemp)
 aws events put-rule \
   --name $SCHEDULE_RULE \
-  --schedule-expression $LAMBDA_SCHEDULE \
+  --schedule-expression "$LAMBDA_SCHEDULE" \
   --state ENABLED \
   --description "Schedule for invoking $LAMBDA_NAME Lamada function." \
   > $tempfile

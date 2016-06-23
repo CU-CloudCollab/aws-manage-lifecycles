@@ -4,14 +4,14 @@
 # Customize these values, according to how you configure your deployment.
 #
 # Name of the S3 bucket where Lambda function code will be uploaded to.
-export S3BUCKET="pea1-test"
+export S3BUCKET="cu-cs-manage-lifecycle-lambda"
 #
 # ARN of the role you created for the Lambda function to execute and
 # implement policies.
-export LAMBDA_ROLE="arn:aws:iam::225162606092:role/pea1-lambda-automanage"
+export LAMBDA_ROLE="arn:aws:iam::225162606092:role/manage-lifecycle-lambda"
 #
 # Arbitrary name for your Lambda function.
-export LAMBDA_NAME="pea1-automanage"
+export LAMBDA_NAME="manage-lifecycle-lambda"
 #
 ##########################################################################
 
@@ -19,7 +19,7 @@ export LAMBDA_NAME="pea1-automanage"
 # cron(5 * * * ? *) will invoke at 5 minutes after each hour.
 # rate(5 minutes) will invole every 5 minutes.
 # http://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
-export LAMBDA_SCHEDULE="cron(5 * * * ? *)"
+export LAMBDA_SCHEDULE='cron(5 * * * ? *)'
 
 # Arbitrary name of the ZIP file to upload.
 export CODE_ZIPFILE="lambda-code.zip"
