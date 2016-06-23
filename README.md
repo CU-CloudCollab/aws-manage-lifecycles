@@ -124,17 +124,23 @@ These instructions will get you setup to customize and deploy this functionality
 **Create and configure the Lambda function**
 
 1. Create the Lambda function:
+
  ```
  $ ./go-create.sh
  ```
+
 2. Set the schedule for the function:
+
  ```
- $ ./go-schedule.sh
+$ ./go-schedule.sh
  ```
+
 3. Optionally, invoke the function the run in AWS immediately:
+
  ```  
  $ ./go-invoke.sh
  ```
+
 4. Check the output of your Lambda function.
   1. In the AWS Console, navigate to you Lambda function.
   1. Click on the "Monitoring" tab.
@@ -142,9 +148,10 @@ These instructions will get you setup to customize and deploy this functionality
 
 **Update the Lambda function**
 1. Whenever you change the lambda.js code, you will need to upload a new package for Lambda to the S3 bucket and tell Lambda to get it.
-  ```
-  $ ./go-update.sh
-  ```
+
+ ```
+ $ ./go-update.sh
+ ```
 
 ## JavaScripts
 
