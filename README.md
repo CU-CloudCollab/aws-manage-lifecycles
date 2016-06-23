@@ -111,7 +111,7 @@ These instructions will get you setup to customize and deploy this functionality
 
 **Test your configuration**
 
-1. Tag a few EC2 instances with "lifecycle-policy" tags.
+1. Tag a few running EC2 instances with "lifecycle-policy" tags.
   * E.g., start some new instances and give them a policies like:
     * "lifecycle-policy=limit-stop:0"
     * "lifecycle-policy=limit-email:0;yourself@example.com"
@@ -147,6 +147,7 @@ $ ./go-schedule.sh
   1. Click on the "View logs in CloudWatch" link.
 
 **Update the Lambda function**
+
 1. Whenever you change the lambda.js code, you will need to upload a new package for Lambda to the S3 bucket and tell Lambda to get it.
 
  ```
