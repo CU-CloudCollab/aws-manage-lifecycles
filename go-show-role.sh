@@ -15,6 +15,4 @@ aws iam list-role-policies --role-name $ROLE_NAME
 
 aws iam get-role-policy --role-name $ROLE_NAME --policy-name SendEmail
 
-aws iam get-role-policy --role-name $ROLE_NAME --policy-name SendEmail
-
 aws iam get-role-policy --role-name $ROLE_NAME --policy-name StopStartTerminateEC2Instances
