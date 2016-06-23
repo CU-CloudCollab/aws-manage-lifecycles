@@ -109,6 +109,7 @@ These instructions will get you setup to customize and deploy this functionality
 1. Update lambda.js:
   1. Set MOMENT_TIMEZONE value to match whatever time you wish to use for specifying on/off times for the "cycle-daily" and "cycle-weekday" policies. See http://momentjs.com/timezone/docs/ and http://momentjs.com/timezone/docs/#/data-loading/getting-zone-names/.
   1. Set the EMAIL_FROM_ADDRESS to one that is configured to be accepted for sending by SES. This is required only if you wish to use the "limit-email" policy.
+  2. Set the DRY_RUN value to false if you want your Lambda function to execute the stop/start/terminate EC2 commands, insted of just doing a dry run.
   1. Optionally, change any of the other constants configured in lambda.js. E.g., POLICY_TAG_NAME.
 
 **Test your configuration**
