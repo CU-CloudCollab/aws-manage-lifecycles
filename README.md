@@ -12,6 +12,8 @@ EC2 instance lifecycle policies are specified by tagging EC2 instances with a ta
 
 * Label name: **lifecycle-policy**
 * Label value formats:
+  * **none**
+    * A policy that does nothing.
   * **limit-stop:[h]**
     * Stop the instance if it is running and if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-stop:0" means to stop the instance as soon as the policy is checked.
