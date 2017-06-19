@@ -3,7 +3,7 @@
 // Runs the Lambda function handler on localhost, not in Lamnda
 
 const lambda = require('./lambda');
-
+console.log("Running function locally, not on Lambda")
 const callback = function(error, message) {
   console.log("Error: " + error);
   console.log('---------------------------------------------------')

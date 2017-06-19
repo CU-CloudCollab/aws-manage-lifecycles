@@ -6,7 +6,7 @@ var EMAIL_FROM_ADDRESS = "cloud-support@cornell.edu";
 var MOMENT_TIMEZONE = "America/New_York";
 
 // Are instance stop/start/terminate dry runs?
-var DRY_RUN = true;
+var DRY_RUN = false;
 
 // misc. constants
 var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
@@ -37,13 +37,14 @@ var aws = require('aws-sdk');
 aws.config.region = 'us-east-1';
 var ec2Client = new aws.EC2();
 var sesClient = new aws.SES();
+var rdsClient = new aws.RDS();
 
 function getTagValue(targetTag, tags) {
   var result = tags.filter(function(item) {
     return item.Key === targetTag;
     }
   )
-  if (targetTag.length < 1) {
+  if (result.length < 1) {
     console.log ("targetTag '" + targetTag + "' is missing.");
     return null;
   }
@@ -51,7 +52,8 @@ function getTagValue(targetTag, tags) {
 }
 
 function getInstanceName(instance) {
-  var result = getTagValue("Name", instance.Tags);
+  if (instance.DBName) return instance.DBName;        // RDS
+  var result = getTagValue("Name", instance.Tags);    // EC2
   if (!result) result = instance.InstanceId;
   return result;
 }
@@ -61,14 +63,21 @@ function getLifeCyclePolicy(instance) {
 }
 
 function checkPolicy(instance) {
-  var instanceName = getTagValue("Name", instance.Tags);
+  var instanceName = getInstanceName(instance);
   var policy = getLifeCyclePolicy(instance);
 
   // console.log(instance);
   // console.log(instance.Tags)
   // console.log("lifecycle-policy = " + policy);
   console.log("--------------------------------");
-  console.log("Instance: " + instanceName + " (" + instance.InstanceId + ")");
+  if (instance.InstanceId) {
+    // EC2
+    console.log("EC2 Instance: " + instanceName + " (" + instance.InstanceId + ")");
+  }
+  else {
+    // RDS
+    console.log("RDS Instance: " + instanceName + " (" + instance.DBInstanceArn + ")");
+  }
 
   var result = policy.split(POLICY_SYNTAX_SEPARATOR_PRIMARY);
   var policyName = result[0];
@@ -76,7 +85,7 @@ function checkPolicy(instance) {
   console.log("policyName: " + policyName + "\tpolicyParms: " + policyParms);
   var running = isInstanceRunning(instance);
   console.log("running?: " + running);
-  if (running)  console.log("launch time: " + instance.LaunchTime);
+  if (running && instance.LaunchTime)  console.log("launch time: " + instance.LaunchTime);
 
   var response = ACTION_NONE;
 
@@ -232,7 +241,12 @@ function isBeyondRunningTimeLimit(instance, hours) {
 }
 
 function isInstanceRunning(instance) {
-  return instance.State.Name == 'running'
+  if (instance.State) {
+    // EC2
+    return instance.State.Name == 'running'
+  }
+  // RDS
+  return instance.DBInstanceStatus == 'available'
 }
 
 function isWeekday(moment) {
@@ -307,8 +321,29 @@ function emailBody(instance) {
 
 exports.myhandler = (event, context) => {
 
-  // console.log('Received event:', JSON.stringify(event, null, 2));
-  // console.log("\n\nInside handler\n\n");
+  rdsClient.describeDBInstances({}, function(err, data) {
+    if (err) console.log(err, err.stack); // an error occurred
+    else {
+      for (var i = 0; i < data.DBInstances.length; i++) {
+        var db = data.DBInstances[i]
+        var params = { ResourceName: db.DBInstanceArn}
+        rdsClient.listTagsForResource(params, function(err, data) {
+          console.log(db.DBInstanceArn)
+          if (err) console.log(err, err.stack); // an error occurred
+          else {
+            var policyTag = getTagValue(POLICY_TAG_NAME, data.TagList)
+            if (policyTag) {
+              db.Tags = data.TagList
+              console.log(JSON.stringify(db, null, 4))
+              console.log("Found lifecycle policy tag: " + policyTag);
+              checkPolicy(db)
+            }
+          }
+        });
+      }
+    }
+  });
+
 
   var ec2Params = {
     Filters: [
@@ -317,28 +352,26 @@ exports.myhandler = (event, context) => {
     ]
   };
 
-  ec2Client.describeInstances( ec2Params, function(err, data) {
-    // console.log("\nIn describe instances:\n");
-    if (err) console.log(err, err.stack); // an error occurred
-    else {
-      // console.log("\n\n" + data + "\n\n"); // successful response
-      // console.log("\n\n" + data.Reservations + "\n\n"); // successful response
-
-      // console.log(data.Reservations)
-      var i;
-      for (i = 0; i < data.Reservations.length; i++) {
-        var r = data.Reservations[i]
-        // console.log(r)
-        var j;
-        for (j = 0; j < r.Instances.length; j++) {
-            var target = r.Instances[j]
-            // console.log(target)
-            var response = checkPolicy(target);
-            takeAction(ec2Client, sesClient, target, response);
-        }
-      }
-     }
-  });
-  // callback(null, "success");
-  // callback('Something went wrong');
+  // ec2Client.describeInstances( ec2Params, function(err, data) {
+  //   // console.log("\nIn describe instances:\n");
+  //   if (err) console.log(err, err.stack); // an error occurred
+  //   else {
+  //     // console.log("\n\n" + data + "\n\n"); // successful response
+  //     // console.log("\n\n" + data.Reservations + "\n\n"); // successful response
+  //
+  //     // console.log(data.Reservations)
+  //     var i;
+  //     for (i = 0; i < data.Reservations.length; i++) {
+  //       var r = data.Reservations[i]
+  //       // console.log(r)
+  //       var j;
+  //       for (j = 0; j < r.Instances.length; j++) {
+  //           var target = r.Instances[j]
+  //           // console.log(target)
+  //           var response = checkPolicy(target);
+  //           takeAction(ec2Client, sesClient, target, response);
+  //       }
+  //     }
+  //    }
+  // });
 };
