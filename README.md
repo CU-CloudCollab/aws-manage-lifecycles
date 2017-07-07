@@ -10,7 +10,7 @@ When stopping RDS instances, a snapshot will be created after the instance is st
 
 ## Lifecycle Policies
 
-EC2 instance lifecycle policies are specified by tagging EC2 instances with a tag named "lifecycle-policy".
+Lifecycle policies are specified by tagging EC2 and RDS instances with a tag named "lifecycle-policy".
 
 * Label name: **lifecycle-policy**
 * Label value formats:
