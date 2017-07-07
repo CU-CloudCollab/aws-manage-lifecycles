@@ -1,10 +1,10 @@
 # aws-manage-lifecycles
 
-This repo contains Node.js functionality to manage lifecycles of AWS EC2 instances using policies specified in tags. Supplemental scripts create and upload the code into AWS Lambda and schedule it to run hourly.
+This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. Supplemental scripts create and upload the code into AWS Lambda and schedule it to run hourly.
 
-The idea is to create one Lambda function in your AWS account that runs at 5 minutes after each hour and scans instances tagged with a lifecycle-policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily (or weekday) on/off cycle.
+The idea is to create one Lambda function in your AWS account that runs at 5 minutes after each hour and scans EC2 and RDS instances tagged with a lifecycle policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily on/off cycle.
 
-This functionality does not launch new instances. It can terminate instances, if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
+This functionality does not launch new instances. It can terminate EC2 instances (not RDS instances), if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
 
 ## Lifecycle Policies
 
@@ -15,21 +15,31 @@ EC2 instance lifecycle policies are specified by tagging EC2 instances with a ta
   * **none**
     * A policy that does nothing.
   * **limit-stop:[h]**
+    * *This policy is applicable only to EC2 instances.*
     * Stop the instance if it is running and if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-stop:0" means to stop the instance as soon as the policy is checked.
   * **limit-terminate:[h]**
+    * *This policy is applicable only to EC2 instances.*
     * Terminate the instance if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-terminate:0" means to terminate the instance as soon as the policy is checked.
-  * **limit-email:[h];[email-address]**
+  * **limit-email:[h]/[email-address]**
+    * *This policy is applicable only to EC2 instances.*
     * Send an email to [email-address] if more than [h] hours have elapsed since instance launch date/time.
-    * The special case "limit-email:0;[email-address]" means "send the email every time the policy is checked".
-  * **cycle-daily:[on-hour];[off-hour]**
+    * The special case "limit-email:0/[email-address]" means "send the email every time the policy is checked".
+  * **cycle-daily:[on-hour]/[off-hour]**
+    * *This policy is valid for EC2 and RDS instances.*
     * Cycle this instance daily, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code).
-    * If [on-hour] > [off-hour] then this is interpreted that the instance should be running overnight. E.g., cycle-daily:20;4 would turn on the instance at 8pm and off at 4am.
+    * If [on-hour] > [off-hour] then this is interpreted that the instance should be running overnight. E.g., cycle-daily:20/4 would turn on the instance at 8pm and off at 4am.
     * If [on-hour] == [off-hour], the policy is non-sensical and nothing is done.
-  * **cycle-weekday:[on-hour];[off-hour]**
+  * **cycle-weekday:[on-hour]/[off-hour]**
+    * *This policy is valid for EC2 and RDS instances.*
     * Cycle this instance on weekdays, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code). Instances remain off on weekends.
-    * If [on-hour] > [off-hour], nothing is done. This could be improved eventually, after deciding on what these overnight cycles mean for Mondays and Fridays.
+    * If [on-hour] > [off-hour], then the instance is turned on at [on-hour] on each weekday (Monday-Friday) and off at [off-hour] on Tuesday-Saturday.
+    * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
+  * **cycle-weekly:[on-hour]/[off-hour]/[day]**
+    * *This policy is valid for EC2 and RDS instances.*
+    * Cycle this instance once per week on the specified day, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code). Day values can be 0-6 corresponding to Sunday-Saturday.
+    * If [on-hour] > [off-hour], the the instance is turned on at [oh-hour] of the designated day and turned off at [off-hour] on the following day.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
 
 ## Deploying
@@ -117,7 +127,7 @@ These instructions will get you setup to customize and deploy this functionality
 1. Tag a few running EC2 instances with "lifecycle-policy" tags.
   * E.g., start some new instances and give them a policies like:
     * "lifecycle-policy=limit-stop:0"
-    * "lifecycle-policy=limit-email:0;yourself@example.com"
+    * "lifecycle-policy=limit-email:0/yourself@example.com"
 1. Invoke lambda.js once locally, using the run-local.js wrapper:
  ```
  $ node run-local.js
