@@ -6,6 +6,8 @@ The idea is to create one Lambda function in your AWS account that runs at 5 min
 
 This functionality does not launch new instances. It can terminate EC2 instances (not RDS instances), if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
 
+When stopping RDS instances, a snapshot will be created after the instance is stopped. Future enhancements to this system could make this more configurable.
+
 ## Lifecycle Policies
 
 EC2 instance lifecycle policies are specified by tagging EC2 instances with a tag named "lifecycle-policy".
