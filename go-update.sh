@@ -12,7 +12,7 @@ source ./constants.sh
 # create/update lamda function
 aws lambda update-function-code \
   --function-name $LAMBDA_NAME \
-  --s3-bucket $S3BUCKET \
-  --s3-key $CODE_ZIPFILE
+  --s3-bucket $S3_BUCKET \
+  --s3-key $S3_KEY_PREFIX$CODE_ZIPFILE
 # [--s3-object-version <value>]
 #[--publish | --no-publish]

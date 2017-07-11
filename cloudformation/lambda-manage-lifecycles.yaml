@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Create AWS resources to support aws-manage-lifecycles.
+Parameters:
+  RoleNameForLambdaFunction:
+    Type: String
+    Default: lambda-manage-lifecycle-role
+    Description: The name of the role that this CloudFormation Template will create and which the Lambda function will run with.
+  NameForLambdaFunction:
+    Type: String
+    Default: lambda-manage-lifecycle
+    Description: The name of the Lambda that this CloudFormation Template will create.
+  EmailFromAddressParam:
+    Type: String
+    Default: me@example.com
+    Description: The email address from which email should be sent from. This email address must be known to Simple Email Service (SES).
+  TimeZoneParam:
+    Type: String
+    Default: "America/New_York"
+    Description: In what time zone will policies be specified? Must be supported by https://momentjs.com/timezone/.
+  CodeS3BucketNameParam:
+    Type: String
+    Default: public.cloud.cit.cornell.edu
+    Description: DESCRIBE THIS
+  CodeS3KeyParam:
+    Type: String
+    Default: examples/aws-manage-lifecycles/lambda-code.zip
+    Description: DESCRIBE THIS
+  DryRunEc2Param:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "false"
+      - "true"
+    Description: DESCRIBE THIS
+Resources:
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Ref RoleNameForLambdaFunction
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+                Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonRDSReadOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        -
+          PolicyName: "send-email"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "ses:SendEmail"
+                Resource: "*"
+        -
+          PolicyName: "stop-start-terminate-ec2-instances"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "ec2:StartInstances"
+                  - "ec2:StopInstances"
+                  - "ec2:TerminateInstances"
+                Resource: !Join [ "", [ "arn:aws:ec2:*:", !Ref "AWS::AccountId", ":instance/*" ] ]
+        -
+          PolicyName: "stop-start-rds-instances"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "rds:StartDBInstance"
+                  - "rds:StopDBInstance"
+                  - "ec2:TerminateInstances"
+                Resource: !Join [ "", [ "arn:aws:ec2:*:", !Ref "AWS::AccountId", ":db:*" ] ]
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        S3Bucket: !Ref CodeS3BucketNameParam
+        S3Key: !Ref CodeS3KeyParam
+      # DeadLetterConfig:
+      #   DeadLetterConfig
+      Description: Manage lifecycles of EC2 and RDS instances, based on resource tags.
+      Environment:
+        Variables:
+          EMAIL_FROM_ADDRESS: !Ref EmailFromAddressParam
+          MOMENT_TIMEZONE: !Ref TimeZoneParam
+          EC2_DRY_RUN: !Ref DryRunEc2Param
+      FunctionName: !Ref NameForLambdaFunction
+      Handler: lambda.myhandler
+      # KmsKeyArn: String
+      MemorySize: 128
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs4.3
+      Timeout: 300
+      # TracingConfig:
+      #   TracingConfig
+      # VpcConfig:
+      #   VPCConfig
+      Tags:
+        -
+          Key: Application
+          Value: infrastructure
+        -
+          Key: Environment
+          Value: dev
+  EventRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: Trigger lambda-manage-lifecycle
+      # EventPattern: JSON object
+      Name: lambda-manage-lifecycle-rule
+      ScheduleExpression: "cron(5 * * * ? *)"
+      State: ENABLED
+      Targets:
+        -
+          Arn: !GetAtt LambdaFunction.Arn
+          Id: lambda-manage-lifecycle
+  PermissionForEventRuleToInvokeLambda:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt EventRule.Arn
+
+

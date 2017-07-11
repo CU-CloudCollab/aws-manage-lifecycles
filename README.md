@@ -1,10 +1,10 @@
 # aws-manage-lifecycles
 
-This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. Supplemental scripts create and upload the code into AWS Lambda and schedule it to run hourly.
+This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources requried for running the Lambda function. Supplemental scripts upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.
 
 The idea is to create one Lambda function in your AWS account that runs at 5 minutes after each hour and scans EC2 and RDS instances tagged with a lifecycle policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily on/off cycle.
 
-This functionality does not launch new instances. It can terminate EC2 instances (not RDS instances), if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
+This functionality does not launch new instances. It can terminate EC2 instances (but not RDS instances), if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
 
 When stopping RDS instances, a snapshot will be created after the instance is stopped. Future enhancements to this system could make this more configurable.
 
@@ -44,252 +44,135 @@ Lifecycle policies are specified by tagging EC2 and RDS instances with a tag nam
     * If [on-hour] > [off-hour], the the instance is turned on at [oh-hour] of the designated day and turned off at [off-hour] on the following day.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
 
-## Deploying
+## Deploying the function to your AWS account
 
-These instructions will get you setup to customize and deploy this functionality to your AWS account. They assume you are using a Mac/Linux workstation.
+Deploying this functionality to your own AWS account is easy to do by following the few steps below. If you want to customize the deployment beyond the parameters provided in the CloudFormation template, you will want to first deploy the function as below, and then see the "Customize the function" documentation below.
 
-**Setup your environment**
+### CloudFormation template
+
+Since the deployment package required by Lambda is available publicly (at https://s3.amazonaws.com/public.cloud.cit.cornell.edu/examples/aws-manage-lifecycles/lambda-code.zip) all you need to do is to create a CloudFormation stack using the [lambda-manage-lifecycles.yaml](cloudformation/lambda-manage-lifecycles.yaml) in this project. See [AWS CloudFormation documentation](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html) for information about creating CloudFormation stacks.
+
+Note that if you wish to use the "limit-email" policy, you will need to ensure that AWS Simple EmailService (SES) is configured in your AWS account and that you have at lease one email address that SES will allow sending mail from.  See [AWS SES documentation](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-email.html).
+
+### Confirming your deployment
+
+1. Create a few new EC2 instances and give them `lifecycle-policy` tags.
+  * Use policies like these so that you don't have to wait for a certain time of the day
+    * Key = `lifecycle-policy` Value = `limit-stop:0`
+    * Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
+1. In the AWS Console, navigate to `Lambda > Functions > lambda-manage-lifecycle`.
+1. Click on the `Test` button. This will bring up the `Input test event` dialog.
+1. Since this Lambda function ignores its input, and we just care about invoking the function, you can use any sample test data. Leave the default `Hello World` sample event template as is, and click on `Save and test`.
+1. Check that the function saw the EC2 instances you tagged with lifecycle policies in the `Log out` window.
+1. The function doesn't output anything as a specific result, so you will see `null` as the overall execution result in the AWS Console.
+
+## Customizing the function
+
+These instructions will get you setup to customize and deploy your custom version to your AWS account. They assume you are using a Mac/Linux workstation.
+
+### Setup your development environment
 
 1. [Install the AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) on your system.
 1. [Configure the AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) with credentials for your AWS account.
-1. Install [jq](https://stedolan.github.io/jq/) onto your workstation.
-1. Install Javascript and supprting libraries.
-  1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4.3.
-  1. Install [NPM](https://www.npmjs.com/)
-  1. Install supporting Javascript libraries (NPM modules):
-    1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
-    1. [moment](http://momentjs.com/)
-    1. [moment-timezone](http://momentjs.com/timezone/)
+1. Install Javascript and supporting libraries.
+  * If you want to use Node.js in a Docker container:
+    1. Ensure you have Docker installed on your workstation. See https://www.docker.com/get-docker.
+    1. Run the [go-setup-local-docker.sh] script to install the following Javascript libraries (npm modules):
+      1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
+      1. [moment](http://momentjs.com/)
+      1. [moment-timezone](http://momentjs.com/timezone/)
+  * If you want to install/use Node.js directly on your workstation.
+    1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4.3.2.
+    1. Install [npm](https://www.npmjs.com/).
+    1. Run the [go-setup-local.sh] script to install the following Javascript libraries (npm modules):
+      1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
+      1. [moment](http://momentjs.com/)
+      1. [moment-timezone](http://momentjs.com/timezone/)
 
-**Customize and configure the code**
+### Customize the function
 
-1. Download this repo to your local machine.
 1. Create an S3 bucket or identify an existing bucket to hold the code to be deployed to Lambda.
   * The only permissions required for the bucket are whatever is needed for you to create and update objects in the bucket.
-1. If you wish to use the "limit-email" policy, you will need to ensure that AWS Simple Email Service (SES) is configured in your AWS account and that you have at lease one email address that SES will allow sending mail from.  
-1. Create an IAM role to be assigned to the Lambda function.
-  1. Go to IAM in the AWS console.
-  1. Create a new role with a name of your choosing.
-  1. In "Select Role Type", select "AWS Lambda" under "AWS Service Roles".
-  1. Attach the following built-in policies:
-    * AmazonEC2ReadOnlyAccess
-    * AWSLambdaBasicExecutionRole
-  1. And "Create Role"
-  1. Navigate to the newly created role.
-  1. On the "Permissions" tab, open the "Inline Policies" section and click on the link to create a new inline policy.
-  1. Select "Custom Policy"
-  1. Set "Policy Name" to "SendEmail".
-  1. Paste the following policy as the Policy Document:
+1. If you wish to use the "limit-email" policy, you will need to ensure that AWS Simple Email Service (SES) is configured in your AWS account and that you have at lease one email address that SES will allow sending mail from. See [AWS SES documentation](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-email.html).    
+1. Deploy the original version of the function using the CloudFormation template as described above. This will provide a baseline deployment of the function that you can then modify.
+1. Clone this repo to your local machine.
   ```
-  {
-      "Version": "2012-10-17",
-      "Statement": [
-          {
-              "Action": [
-                  "ses:SendEmail"
-              ],
-              "Resource": "*",
-              "Effect": "Allow",
-              "Sid": "Stmt1466617229994"
-          }
-      ]
-  }
+  $ git clone https://github.com/CU-CloudCollab/aws-manage-lifecycles.git
+  $ cd aws-manage-lifecycles
   ```
-  1. Click "Apply Policy".
-  1. Repeat the process to add another inline policy with name "StopStartTerminateEC2Instances" and policy document as follows:
-  ```
-  {
-      "Version": "2012-10-17",
-      "Statement": [
-          {
-              "Action": [
-                  "ec2:StartInstances",
-                  "ec2:StopInstances",
-                  "ec2:TerminateInstances"
-              ],
-              "Resource": "arn:aws:ec2:*:*:instance/*",
-              "Effect": "Allow",
-              "Sid": "Stmt1466617309959"
-          }
-      ]
-  }
-  ```
-1. Update the constants.sh file:
-  1. Set the bucket name (S3BUCKET) and role ARN (LAMBDA_ROLE) to the values resulting from earlier configuration steps.
-  1. Optionally change the schedule you wish to apply to your Lambda function. See http://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
-  1. Optionally, update other names and labels.
-1. Update lambda.js:
-  1. Set MOMENT_TIMEZONE value to match whatever time you wish to use for specifying on/off times for the "cycle-daily" and "cycle-weekday" policies. See http://momentjs.com/timezone/docs/ and http://momentjs.com/timezone/docs/#/data-loading/getting-zone-names/.
-  1. Set the EMAIL_FROM_ADDRESS to one that is configured to be accepted for sending by SES. This is required only if you wish to use the "limit-email" policy.
-  2. Set the DRY_RUN value to false if you want your Lambda function to execute the stop/start/terminate EC2 commands, insted of just doing a dry run.
-  1. Optionally, change any of the other constants configured in lambda.js. E.g., POLICY_TAG_NAME.
+1. Update the [constants.sh] file:
+  1. Set the bucket name (S3_BUCKET) to the bucket you created or identified at the beginning of these customization steps above.
+  1. Optionally, update other names and values.
+1. Make other changes you wish to [lambda.js].
 
-**Test your configuration**
+### Test your configuration
 
 1. Tag a few running EC2 instances with "lifecycle-policy" tags.
-  * E.g., start some new instances and give them a policies like:
-    * "lifecycle-policy=limit-stop:0"
-    * "lifecycle-policy=limit-email:0/yourself@example.com"
-1. Invoke lambda.js once locally, using the run-local.js wrapper:
- ```
- $ node run-local.js
- ```
-1. Review local output and check your EC2 instances to see the results of the policies.
+  * Use policies like these so that you don't have to wait for a certain time of the day
+    * Key = `lifecycle-policy` Value = `limit-stop:0`
+    * Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
+1. Invoke lambda.js once locally.
+  * Using Node.js installed on your workstation:
+    ```
+    $ ./go-run-local.sh
+    ```
+  * Using Node.js in Docker:
+    ```
+    $ ./go-run-local-docker.sh
+    ```
+1. Review the script output and check the state of your EC2 instances to see the results of the policies.
 
-**Create and configure the Lambda function**
+### Push your configuration to AWS
 
-1. Create the Lambda function:
+1. Package up the code, upload it to S3, and update the existing Lambda function to use it. This is all taken care of in one script. It will upload a package with the appropriate format to the S3 bucket named in [constants.sh].
 
- ```
- $ ./go-create.sh
- ```
+  ```
+  $ ./go-update.sh
+  ```
 
-2. Set the schedule for the function:
+### (Optional) Push a new code version and invoke the updated Lambda function
 
- ```
-$ ./go-schedule.sh
- ```
+1. Update tags on EC2/RDS instance or change the instance states so that the function will have something to do.
 
-3. Optionally, invoke the function the run in AWS immediately:
+2. Invoke the function in AWS using the CLI
 
  ```  
  $ ./go-invoke.sh
  ```
 
-4. Check the output of your Lambda function.
-  1. In the AWS Console, navigate to you Lambda function.
-  1. Click on the "Monitoring" tab.
-  1. Click on the "View logs in CloudWatch" link.
+### Update the CloudFormation stack
 
-**Update the Lambda function**
+This step bakes in the customizations that you made locally.
 
-1. Whenever you change the lambda.js code, you will need to upload a new package for Lambda to the S3 bucket and tell Lambda to get it.
+Here, you simply want to find the CloudFormation stack you made earlier, and update it. Specify the same template ([cloudformation/lambda-manage-lifecycles.yaml]) but this time around, change the CodeS3BucketNameParam to be the S3 bucket you used in the "Customize the function" step. Change other stack parameters to match the settings you updated in [constants.sh].
 
- ```
- $ ./go-update.sh
- ```
-
-## JavaScripts
-
-**lambda.js** contains a Node.js script for executing in Lambda.
-
-**run-local.js** will run that script on a local machine, instead of in AWS Lambda.
-
-**test.js** tests some of the functions in lambda.js locally. Command line:
-
-  ```
-  $ node test.js
-  ```
+After the stack successfully updates, you can push new versions of [lambda.js] to the S3 bucket using the [go-update.sh] script. When you want to finalize the script, bake it into the stack simply by updating the CloudFormation stack again, using the previous set of stack parameters.
 
 ## bash Scripts
 
-**constants.sh** constants required for the bash scripts. Note that this script does NOT supply constants for lambda.js.
+* **[constants.sh]** constants required for the bash scripts and for running lambda.js locally.
 
-**go-upload.sh** zips the local lambda.js script and supporting Javascript modules into a Lambda-compatible package of code and uploads it to S3. This script is called by other scripts here.
+* **[go-setup-local.sh]** installs the Javascript libraries (npm modules) locally so that lambda.js can be run locally and so that you can create an appropriately structured Lambda deployment package for uploading.
+  * **[go-setup-local-docker.sh]** does the same thing but uses a Node.js Docker container to do it.
 
-**go-create.sh** creates the Lambda function, pointing it to the uploaded code package in S3.
+* **[go-upload.sh]** zips the local lambda.js script and supporting Javascript modules into a Lambda-compatible package of code and uploads it to S3. This script is called by other scripts here.
 
-**go-schedule.sh**  create an CloudWatch rule to be evaulated on a schedule. It connects the Lambda function to the rule and adds the necessary permission to the Lambda function that allows the event to trigger the funciton.
+* **[go-update.sh]** Updates the Lambda function with the current version of the local lambda.js file.
 
-**go-update.sh** Updates the Lambda function with the current version of the local lambda.js file.
+* **[go-run-aws.sh]** allows you to manually invoke your Lambda function in AWS from the CLI.
 
-**go-invoke.sh** allows you to manually invoke the lambda.js functionality on Lambda
+* **[go-run-local.sh]** runs the lambda.js function locally, not by invoking the code in Lambda.
 
-**go-show-role.sh** shows configuration of the role you are assigning to the Lmabda function. Be sure to set `ROLE_NAME` in the script to be the name you used.
+* **[go-run-local-docker.sh]** runs the lambda.js function locally in a Node.js Docker container, not by invoking the code in Lambda.
 
-## Dependencies for Development
+* **[go-run-test.sh]** runs some tests to show the interpretation of example lifecycle policies.
+  * **[go-run-test-docker.sh]** runs the same tests, but uses a Node.js Docker container to do it.
 
-These scripts expect the following on your development workstation:
+## Javascripts
 
-* [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4.3.
-* [NPM](https://www.npmjs.com/)
-* NPM modules:
-  * [aws-sdk](https://www.npmjs.com/package/aws-sdk)
-  * [moment](http://momentjs.com/)
-  * [moment-timezone](http://momentjs.com/timezone/)
-* [jq](https://stedolan.github.io/jq/)
+* **[lambda.js]** contains a Node.js script for executing in Lambda.
 
-## AWS Resource Dependencies
+* **[run-local.js]** will run that script on a local machine, instead of in AWS Lambda.
 
-**S3.** These scripts expect an S3 bucket has already been created to use as the target for the Lambda code package. In running these scripts you need enough privileges on S3 of that bucket to create and update objects in it.
+* **[run-test.js]** tests some of the functions in lambda.js locally. Command line:
 
-**IAM Role.** The IAM role referenced in these scripts is a role that attaches AWSLambdaBasicExecutionRole, AmazonEC2ReadOnlyAccess, and defines inline policies SendEmail, and StopStartTerminateEC2Instances. The scripts included in this repo DO NOT define these. You will have to create them yourself. Use the go-show-role.sh script to confirm that your role looks like the following:
-
-```
-$ ./go-show-role.sh
-{
-    "Role": {
-        "AssumeRolePolicyDocument": {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Action": "sts:AssumeRole",
-                    "Effect": "Allow",
-                    "Principal": {
-                        "Service": "lambda.amazonaws.com"
-                    }
-                }
-            ]
-        },
-        "RoleId": "AROAJHLL5RCZQQ6BHRG4G",
-        "CreateDate": "2016-06-23T13:50:08Z",
-        "RoleName": "manage-lifecycle-lambda",
-        "Path": "/",
-        "Arn": "arn:aws:iam::225162606092:role/manage-lifecycle-lambda"
-    }
-}
-{
-    "AttachedPolicies": [
-        {
-            "PolicyName": "AmazonEC2ReadOnlyAccess",
-            "PolicyArn": "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
-        },
-        {
-            "PolicyName": "AWSLambdaBasicExecutionRole",
-            "PolicyArn": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-        }
-    ]
-}
-{
-    "PolicyNames": [
-        "SendEmail",
-        "StopStartTerminateEC2Instances"
-    ]
-}
-{
-    "RoleName": "manage-lifecycle-lambda",
-    "PolicyDocument": {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": [
-                    "ses:SendEmail"
-                ],
-                "Resource": "*",
-                "Effect": "Allow",
-                "Sid": "Stmt1466617229994"
-            }
-        ]
-    },
-    "PolicyName": "SendEmail"
-}
-{
-    "RoleName": "manage-lifecycle-lambda",
-    "PolicyDocument": {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Action": [
-                    "ec2:StartInstances",
-                    "ec2:StopInstances",
-                    "ec2:TerminateInstances"
-                ],
-                "Resource": "arn:aws:ec2:*:*:instance/*",
-                "Effect": "Allow",
-                "Sid": "Stmt1466617309959"
-            }
-        ]
-    },
-    "PolicyName": "StopStartTerminateEC2Instances"
-}
-```

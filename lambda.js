@@ -1,12 +1,14 @@
 'use strict';
 
+var CODE_VERSION="1.0"
+
 // Constants used to customize the configuration of your deployment.
 // You MUST update these according to your situation.
-var EMAIL_FROM_ADDRESS = "cloud-support@cornell.edu";
-var MOMENT_TIMEZONE = "America/New_York";
+var EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS;
+var MOMENT_TIMEZONE = process.env.MOMENT_TIMEZONE;
 
 // Are instance stop/start/terminate dry runs? For EC2 policies only.
-var DRY_RUN = false;
+var EC2_DRY_RUN = ("true" == process.env.EC2_DRY_RUN);
 
 // misc. constants
 var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
@@ -156,7 +158,7 @@ function checkPolicyCycle(instance, policyName, policyParms) {
   if (withinTarget) {
     console.log("Current hour (" + currentHour+ ") is INSIDE target period.")
     if (isInstanceRunning(instance)) {
-      console.log("Instance is alread running.");
+      console.log("Instance is already running.");
     }
     else if (isInstanceStartable(instance)) {
       console.log("Instance should be turned ON.")
@@ -223,7 +225,7 @@ function checkPolicyLimitEmail(instance, policyName, policyParms) {
   var temp = policyParms.split(POLICY_SYNTAX_SEPARATOR_SECONDARY);
   var hours = temp[0];
   var email = temp[1];
-  instance.automanageEmail = email;
+  instance.lifecycleEmail = email;
   var beyondLimit = isBeyondRunningTimeLimit(instance, hours);
   // console.log("notification address: " + email);
   // console.log("hours: " + hours);
@@ -304,7 +306,7 @@ function isWeekday(moment) {
 function takeActionRds(rdsClient, sesClient, instance, action) {
   var sesParams = {
     Destination: { /* required */
-      ToAddresses: [ instance.automanageEmail ]
+      ToAddresses: [ instance.lifecycleEmail ]
     },
     Message: { /* required */
       Body: { /* required */
@@ -326,7 +328,7 @@ function takeActionRds(rdsClient, sesClient, instance, action) {
 
   switch (action) {
     case ACTION_EMAIL:
-      console.log("ACTION: Sending email to " + instance.automanageEmail + " about " + getInstanceName(instance));
+      console.log("ACTION: Sending email to " + instance.lifecycleEmail + " about " + getInstanceName(instance));
       sesClient.sendEmail(sesParams, callback);
       break;
     case ACTION_START:
@@ -366,12 +368,12 @@ function takeActionEc2(ec2Client, sesClient, instance, action) {
 
   var ec2Params = {
     InstanceIds: [ instance.InstanceId ],
-    DryRun: DRY_RUN
+    DryRun: EC2_DRY_RUN
   };
 
   var sesParams = {
     Destination: { /* required */
-      ToAddresses: [ instance.automanageEmail ]
+      ToAddresses: [ instance.lifecycleEmail ]
     },
     Message: { /* required */
       Body: { /* required */
@@ -393,7 +395,7 @@ function takeActionEc2(ec2Client, sesClient, instance, action) {
 
   switch (action) {
     case ACTION_EMAIL:
-      console.log("ACTION: Sending email to " + instance.automanageEmail + " about " + getInstanceName(instance));
+      console.log("ACTION: Sending email to " + instance.lifecycleEmail + " about " + getInstanceName(instance));
       sesClient.sendEmail(sesParams, callback);
       break;
     case ACTION_START:
@@ -446,6 +448,8 @@ function tagsForEachDBInstance(db) {
 
 exports.myhandler = (event, context) => {
 
+  console.log("aws-manage-lifecycles version: "+CODE_VERSION);
+
   rdsClient.describeDBInstances({}, function(err, data) {
     if (err) console.log(err, err.stack); // an error occurred
     else {
@@ -460,7 +464,6 @@ exports.myhandler = (event, context) => {
       }
     }
   });
-
 
   var ec2Params = {
     Filters: [

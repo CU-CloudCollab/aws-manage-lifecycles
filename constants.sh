@@ -1,29 +1,25 @@
 #!/usr/bin/env bash
 
 ##########################################################################
-# Customize these values, according to how you configure your deployment.
+# You must replace this an S3 bucket you can write to, if you will be
+# customizing/updating this Lambda function.
 #
 # Name of the S3 bucket where Lambda function code will be uploaded to.
-export S3BUCKET="cu-cs-manage-lifecycle-lambda"
-#
-# ARN of the role you created for the Lambda function to execute and
-# implement policies.
-export LAMBDA_ROLE="arn:aws:iam::225162606092:role/manage-lifecycle-lambda"
-#
-# Arbitrary name for your Lambda function.
-export LAMBDA_NAME="manage-lifecycle-lambda"
+export S3_BUCKET="public.cloud.cit.cornell.edu"
 #
 ##########################################################################
 
-# AWS Lambda compatible schedule specification. E.g.,
-# cron(5 * * * ? *) will invoke at 5 minutes after each hour.
-# rate(5 minutes) will invole every 5 minutes.
-# http://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
-export LAMBDA_SCHEDULE='cron(5 * * * ? *)'
+# Arbitrary name for your Lambda function.
+export LAMBDA_NAME="lambda-manage-lifecycle"
 
 # Arbitrary name of the ZIP file to upload.
 export CODE_ZIPFILE="lambda-code.zip"
 
-# Names and IDs used for scheduling Lambda function.
-export STATEMENT_ID="$LAMBDA_NAME-statement"
-export SCHEDULE_RULE="$LAMBDA_NAME-rule"
+# Prefix of S3 key for the CODE_ZIPFILE
+export S3_KEY_PREFIX="examples/aws-manage-lifecycles/"
+# Full S3 key name is $S3_KEY_PREFIX$CODE_ZIPFILE
+
+# Environment parameters required by lambda.js.
+export EMAIL_FROM_ADDRESS="me@example.com"
+export MOMENT_TIMEZONE="America/New_York"
+export EC2_DRY_RUN="false" # RDS does not have a dry_run option.
