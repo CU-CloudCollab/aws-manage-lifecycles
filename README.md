@@ -1,16 +1,16 @@
 # aws-manage-lifecycles
 
-This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources requried for running the Lambda function. Supplemental scripts upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.
+This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources requried for running the Lambda function. If you wish to customize the functionality, supplemental scripts are provided to upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.
 
 The idea is to create one Lambda function in your AWS account that runs at 5 minutes after each hour and scans EC2 and RDS instances tagged with a lifecycle policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily on/off cycle.
 
-This functionality does not launch new instances. It can terminate EC2 instances (but not RDS instances), if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
+This functionality does not launch new instances. It can terminate EC2 instances (but not RDS instances) if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
 
-When stopping RDS instances, a snapshot will be created after the instance is stopped. Future enhancements to this system could make this more configurable.
+When stopping RDS instances, a snapshot will be created (be default) after the instance is stopped, but this is configurable.
 
 ## Lifecycle Policies
 
-Lifecycle policies are specified by tagging EC2 and RDS instances with a tag named "lifecycle-policy".
+Lifecycle policies are specified by tagging EC2 and RDS instances with a tag named "lifecycle-policy". Some lifecycle policies cannot be applied to RDS instance because at present there is no metadata available about RDS instances that indicate the most recent time an instance was started, or how long it has been running.
 
 * Label name: **lifecycle-policy**
 * Label value formats:
@@ -54,12 +54,12 @@ Since the deployment package required by Lambda is available publicly (at https:
 
 Note that if you wish to use the "limit-email" policy, you will need to ensure that AWS Simple Email Service (SES) is configured in your AWS account and that you have at least one email address that SES will allow sending mail from.  See [AWS SES documentation](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-email.html). Use that validated email address for the CloudFormation template "EmailFromAddressParam" parameter.
 
-### Confirming your deployment
+### Confirming your CloudFormation deployment
 
-1. Create a few new EC2 instances and give them `lifecycle-policy` tags.
-  * Use policies like these so that you don't have to wait for a certain time of the day
-    * Key = `lifecycle-policy` Value = `limit-stop:0`
-    * Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
+1. Create a few new EC2 instances and give them `lifecycle-policy` tags. Use policies like these so that you don't have to wait for a certain time of the day
+
+  1. Key = `lifecycle-policy` Value = `limit-stop:0`
+  1. Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
 1. In the AWS Console, navigate to `Lambda > Functions > lambda-manage-lifecycle`.
 1. Click on the `Test` button. This will bring up the `Input test event` dialog.
 1. Since this Lambda function ignores its input, and we just care about invoking the function, you can use any sample test data. Leave the default `Hello World` sample event template as is, and click on `Save and test`.
