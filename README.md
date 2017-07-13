@@ -57,14 +57,13 @@ Note that if you wish to use the "limit-email" policy, you will need to ensure t
 ### Confirming your CloudFormation deployment
 
 1. Create a few new EC2 instances and give them `lifecycle-policy` tags. Use policies like these so that you don't have to wait for a certain time of the day
-
-  1. Key = `lifecycle-policy` Value = `limit-stop:0`
-  1. Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
-1. In the AWS Console, navigate to `Lambda > Functions > lambda-manage-lifecycle`.
-1. Click on the `Test` button. This will bring up the `Input test event` dialog.
-1. Since this Lambda function ignores its input, and we just care about invoking the function, you can use any sample test data. Leave the default `Hello World` sample event template as is, and click on `Save and test`.
-1. Check that the function saw the EC2 instances you tagged with lifecycle policies in the `Log output` window.
-1. The function doesn't output anything as a specific result, so you will see `null` as the overall execution result in the AWS Console.
+  * Key = `lifecycle-policy` Value = `limit-stop:0`
+  * Key = `lifecycle-policy` Value = `limit-email:0/yourself@example.com`
+2. In the AWS Console, navigate to `Lambda > Functions > lambda-manage-lifecycle`.
+3. Click on the `Test` button. This will bring up the `Input test event` dialog.
+4. Since this Lambda function ignores its input, and we just care about invoking the function, you can use any sample test data. Leave the default `Hello World` sample event template as is, and click on `Save and test`.
+5. Check that the function saw the EC2 instances you tagged with lifecycle policies in the `Log output` window.
+6. The function doesn't output anything as a specific result, so you will see `null` as the overall execution result in the AWS Console.
 
 ## Customizing the function
 
@@ -73,18 +72,18 @@ These instructions will get you setup to customize and deploy your custom versio
 ### Setup your development environment
 
 1. [Install the AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/installing.html) on your system.
-1. [Configure the AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) with credentials for your AWS account.
-1. Install Javascript and supporting libraries.
+2. [Configure the AWS CLI](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) with credentials for your AWS account.
+3. Install Javascript and supporting libraries.
   * If you want to use Node.js in a Docker container:
     1. Ensure you have Docker installed on your workstation. See https://www.docker.com/get-docker.
-    1. Run the [go-setup-local-docker.sh] script to install the following Javascript libraries (npm modules):
+    1. Run the [go-setup-local-docker.sh](go-setup-local-docker.sh) script to install the following Javascript libraries (npm modules):
       1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
       1. [moment](http://momentjs.com/)
       1. [moment-timezone](http://momentjs.com/timezone/)
   * If you want to install/use Node.js directly on your workstation.
     1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4 .3.2.
     1. Install [npm](https://www.npmjs.com/).
-    1. Run the [go-setup-local.sh] script to install the following Javascript libraries (npm modules):
+    1. Run the [go-setup-local.sh](go-setup-local.sh) script to install the following Javascript libraries (npm modules):
       1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
       1. [moment](http://momentjs.com/)
       1. [moment-timezone](http://momentjs.com/timezone/)
@@ -100,10 +99,10 @@ These instructions will get you setup to customize and deploy your custom versio
   $ git clone https://github.com/CU-CloudCollab/aws-manage-lifecycles.git
   $ cd aws-manage-lifecycles
   ```
-1. Update the [constants.sh] file:
+1. Update the [constants.sh](constants.sh) file:
   1. Set the bucket name (S3_BUCKET) to the bucket you created or identified at the beginning of these customization steps above.
   1. Optionally, update other names and values.
-1. Make other changes you wish to [lambda.js].
+1. Make other changes you wish to [lambda.js](lambda.js).
 
 ### Test your configuration
 
@@ -124,13 +123,13 @@ These instructions will get you setup to customize and deploy your custom versio
 
 ### Push your configuration to AWS
 
-1. Package up the code, upload it to S3, and update the existing Lambda function to use it. This is all taken care of in one script. It will upload a package with the appropriate format to the S3 bucket named in [constants.sh].
+1. Package up the code, upload it to S3, and update the existing Lambda function to use it. This is all taken care of in one script. It will upload a package with the appropriate format to the S3 bucket named in [constants.sh](constants.sh).
 
   ```
   $ ./go-update.sh
   ```
 
-### (Optional) Push a new code version and invoke the updated Lambda function
+### (Optional) Invoke the updated Lambda function from the CLI
 
 1. Update tags on EC2/RDS instance or change the instance states so that the function will have something to do.
 
@@ -144,35 +143,35 @@ These instructions will get you setup to customize and deploy your custom versio
 
 This step bakes in the customizations that you made locally.
 
-Here, you simply want to find the CloudFormation stack you made earlier, and update it. Specify the same template ([cloudformation/lambda-manage-lifecycles.yaml]) but this time around, change the CodeS3BucketNameParam to be the S3 bucket you used in the "Customize the function" step. Change other stack parameters to match the settings you updated in [constants.sh].
+Here, you simply want to find the CloudFormation stack you made earlier, and update it. Specify the same template ([cloudformation/lambda-manage-lifecycles.yaml](cloudformation/lambda-manage-lifecycles.yaml)) but this time around, change the CodeS3BucketNameParam to be the S3 bucket you used in the "Customize the function" step. Change other stack parameters to match the settings you updated in [constants.sh](constants.sh).
 
-After the stack successfully updates, you can push new versions of [lambda.js] to the S3 bucket using the [go-update.sh] script. When you want to finalize the script, bake it into the stack simply by updating the CloudFormation stack again, using the previous set of stack parameters.
+After the stack successfully updates, you can push new versions of [lambda.js](lambda.js) to the S3 bucket using the [go-update.sh](go-update.sh) script. When you want to finalize the script, bake it into the stack simply by updating the CloudFormation stack again, using the previous set of stack parameters.
 
 ## bash Scripts
 
-* **[constants.sh]** constants required for the bash scripts and for running lambda.js locally.
+* **[constants.sh](constants.sh)** constants required for the bash scripts and for running lambda.js locally.
 
-* **[go-setup-local.sh]** installs the Javascript libraries (npm modules) locally so that lambda.js can be run locally and so that you can create an appropriately structured Lambda deployment package for uploading.
-  * **[go-setup-local-docker.sh]** does the same thing but uses a Node.js Docker container to do it.
+* **[go-setup-local.sh](go-setup-local.sh)** installs the Javascript libraries (npm modules) locally so that lambda.js can be run locally and so that you can create an appropriately structured Lambda deployment package for uploading.
+  * **[go-setup-local-docker.sh](go-setup-local-docker.sh)** does the same thing but uses a Node.js Docker container to do it.
 
-* **[go-upload.sh]** zips the local lambda.js script and supporting Javascript modules into a Lambda-compatible package of code and uploads it to S3. This script is called by other scripts here.
+* **[go-upload.sh](go-upload.sh)** zips the local lambda.js script and supporting Javascript modules into a Lambda-compatible package of code and uploads it to S3. This script is called by other scripts here.
 
-* **[go-update.sh]** Updates the Lambda function with the current version of the local lambda.js file.
+* **[go-update.sh](go-update.sh)** Updates the Lambda function with the current version of the local lambda.js file.
 
-* **[go-run-aws.sh]** allows you to manually invoke your Lambda function in AWS from the CLI.
+* **[go-run-aws.sh](go-run-aws.sh)** invokes your Lambda function in AWS from the CLI.
 
-* **[go-run-local.sh]** runs the lambda.js function locally, not by invoking the code in Lambda.
+* **[go-run-local.sh](go-run-local.sh)** runs the lambda.js function locally, not by invoking the code in Lambda.
 
-* **[go-run-local-docker.sh]** runs the lambda.js function locally in a Node.js Docker container, not by invoking the code in Lambda.
+* **[go-run-local-docker.sh](go-run-local-docker.sh)** runs the lambda.js function locally in a Node.js Docker container, not by invoking the code in Lambda.
 
-* **[go-run-test.sh]** runs some tests to show the interpretation of example lifecycle policies.
-  * **[go-run-test-docker.sh]** runs the same tests, but uses a Node.js Docker container to do it.
+* **[go-run-test.sh](go-run-test)** runs some tests to show the interpretation of example lifecycle policies.
+  * **[go-run-test-docker.sh](go-run-test-docker.sh)** runs the same tests, but uses a Node.js Docker container to do it.
 
 ## Javascripts
 
-* **[lambda.js]** contains a Node.js script for executing in Lambda.
+* **[lambda.js](lambda.js)** contains a Node.js script for executing in Lambda.
 
-* **[run-local.js]** will run that script on a local machine, instead of in AWS Lambda.
+* **[run-local.js](run-local.js)** will run that script on a local machine, instead of in AWS Lambda.
 
-* **[run-test.js]** tests some of the functions in lambda.js locally. Command line:
+* **[run-test.js](run-test.js)** tests some of the functions in lambda.js locally. Command line:
 
