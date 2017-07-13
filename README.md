@@ -52,7 +52,7 @@ Deploying this functionality to your own AWS account is easy to do by following 
 
 Since the deployment package required by Lambda is available publicly (at https://s3.amazonaws.com/public.cloud.cit.cornell.edu/examples/aws-manage-lifecycles/lambda-code.zip) all you need to do is to create a CloudFormation stack using the [lambda-manage-lifecycles.yaml](cloudformation/lambda-manage-lifecycles.yaml) in this project. See [AWS CloudFormation documentation](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html) for information about creating CloudFormation stacks.
 
-Note that if you wish to use the "limit-email" policy, you will need to ensure that AWS Simple EmailService (SES) is configured in your AWS account and that you have at lease one email address that SES will allow sending mail from.  See [AWS SES documentation](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-email.html).
+Note that if you wish to use the "limit-email" policy, you will need to ensure that AWS Simple Email Service (SES) is configured in your AWS account and that you have at least one email address that SES will allow sending mail from.  See [AWS SES documentation](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/setting-up-email.html). Use that validated email address for the CloudFormation template "EmailFromAddressParam" parameter.
 
 ### Confirming your deployment
 
@@ -63,7 +63,7 @@ Note that if you wish to use the "limit-email" policy, you will need to ensure t
 1. In the AWS Console, navigate to `Lambda > Functions > lambda-manage-lifecycle`.
 1. Click on the `Test` button. This will bring up the `Input test event` dialog.
 1. Since this Lambda function ignores its input, and we just care about invoking the function, you can use any sample test data. Leave the default `Hello World` sample event template as is, and click on `Save and test`.
-1. Check that the function saw the EC2 instances you tagged with lifecycle policies in the `Log out` window.
+1. Check that the function saw the EC2 instances you tagged with lifecycle policies in the `Log output` window.
 1. The function doesn't output anything as a specific result, so you will see `null` as the overall execution result in the AWS Console.
 
 ## Customizing the function
@@ -82,7 +82,7 @@ These instructions will get you setup to customize and deploy your custom versio
       1. [moment](http://momentjs.com/)
       1. [moment-timezone](http://momentjs.com/timezone/)
   * If you want to install/use Node.js directly on your workstation.
-    1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4.3.2.
+    1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4 .3.2.
     1. Install [npm](https://www.npmjs.com/).
     1. Run the [go-setup-local.sh] script to install the following Javascript libraries (npm modules):
       1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)

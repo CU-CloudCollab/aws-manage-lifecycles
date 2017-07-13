@@ -12,7 +12,7 @@ Parameters:
     Description: The name of the Lambda that this CloudFormation Template will create.
   EmailFromAddressParam:
     Type: String
-    Default: me@example.com
+    Default: you@cornell.edu
     Description: The email address from which email should be sent from. This email address must be known to Simple Email Service (SES).
   TimeZoneParam:
     Type: String
@@ -21,18 +21,25 @@ Parameters:
   CodeS3BucketNameParam:
     Type: String
     Default: public.cloud.cit.cornell.edu
-    Description: DESCRIBE THIS
+    Description: This is the S3 bucket where the deployment package (.zip file) can be retrieved by Lambda.
   CodeS3KeyParam:
     Type: String
     Default: examples/aws-manage-lifecycles/lambda-code.zip
-    Description: DESCRIBE THIS
+    Description: This is the key within the S3 bucket where the deployment package (.zip file) can be retrieved by Lambda.
   DryRunEc2Param:
     Type: String
     Default: "false"
     AllowedValues:
       - "false"
       - "true"
-    Description: DESCRIBE THIS
+    Description: Should the EC2 API user the dry_run option to test whether the EC2 instance statate manipulation is possible, but not execute it (i.e., dry_run = true). Or, whether to actually execute the EC2 instance state changes. There is no similar option from the RDS API.
+  TakeRdsSnapshotParam:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Should RDS create a snapshot every time an RDS instance is stopped?
 Resources:
   LambdaRole:
     Type: "AWS::IAM::Role"
@@ -83,8 +90,9 @@ Resources:
                 Action:
                   - "rds:StartDBInstance"
                   - "rds:StopDBInstance"
-                  - "ec2:TerminateInstances"
-                Resource: !Join [ "", [ "arn:aws:ec2:*:", !Ref "AWS::AccountId", ":db:*" ] ]
+                Resource:
+                  - !Join [ "", [ "arn:aws:rds:*:", !Ref "AWS::AccountId", ":db:*" ] ]
+                  - !Join [ "", [ "arn:aws:rds:*:", !Ref "AWS::AccountId", ":snapshot:*" ] ]
   LambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -99,6 +107,7 @@ Resources:
           EMAIL_FROM_ADDRESS: !Ref EmailFromAddressParam
           MOMENT_TIMEZONE: !Ref TimeZoneParam
           EC2_DRY_RUN: !Ref DryRunEc2Param
+          SNAPSHOT_ON_RDS_STOP: !Ref TakeRdsSnapshotParam
       FunctionName: !Ref NameForLambdaFunction
       Handler: lambda.myhandler
       # KmsKeyArn: String

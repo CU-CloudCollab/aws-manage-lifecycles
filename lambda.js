@@ -9,6 +9,7 @@ var MOMENT_TIMEZONE = process.env.MOMENT_TIMEZONE;
 
 // Are instance stop/start/terminate dry runs? For EC2 policies only.
 var EC2_DRY_RUN = ("true" == process.env.EC2_DRY_RUN);
+var SNAPSHOT_ON_RDS_STOP = ("true" == process.env.SNAPSHOT_ON_RDS_STOP);
 
 // misc. constants
 var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
@@ -36,7 +37,10 @@ var ACTION_EMAIL = "email";
 var moment = require('moment-timezone');
 moment.tz.setDefault(MOMENT_TIMEZONE);
 
+// try to use our local aws-sdk version (~2.83.0) instead of the built in one for
+// Lambda, which is 2.54.0 as of July 15, 2017.
 var aws = require('aws-sdk');
+
 aws.config.region = 'us-east-1';
 var ec2Client = new aws.EC2();
 var sesClient = new aws.SES();
@@ -55,7 +59,7 @@ function getTagValue(targetTag, tags) {
 }
 
 function isRds(instance) {
-  if (instance.DBName) return true;
+  if (instance.DBInstanceArn) return true;
   return false;
 }
 
@@ -64,7 +68,7 @@ function isEc2(instance) {
 }
 
 function getInstanceName(instance) {
-  if (isRds(instance)) return instance.DBName;        // RDS
+  if (isRds(instance)) return instance.DBInstanceArn;        // RDS
   var result = getTagValue("Name", instance.Tags);    // EC2
   if (!result) result = instance.InstanceId;
   return result;
@@ -88,7 +92,7 @@ function checkPolicy(instance) {
   }
   else {
     // RDS
-    console.log("RDS Instance: " + instanceName + " (" + instance.DBInstanceArn + ")");
+    console.log("RDS Instance: " + instanceName);
   }
 
   var result = policy.split(POLICY_SYNTAX_SEPARATOR_PRIMARY);
@@ -339,11 +343,15 @@ function takeActionRds(rdsClient, sesClient, instance, action) {
       rdsClient.startDBInstance(rdsParams, callback);
       break;
     case ACTION_STOP:
-      var now = moment();
+
       var rdsParams = {
         DBInstanceIdentifier: instance.DBInstanceIdentifier, /* required */
-        DBSnapshotIdentifier: instance.DBInstanceIdentifier + "-lifecycle-" + now.format("YYYY-MM-DD-HH-mm")
+        // DBSnapshotIdentifier: instance.DBInstanceIdentifier + "-lifecycle-" + now.format("YYYY-MM-DD-HH-mm")
       };
+      if (SNAPSHOT_ON_RDS_STOP) {
+        rdsParams.DBSnapshotIdentifier = instance.DBInstanceIdentifier + "-lifecycle-" + moment().format("YYYY-MM-DD-HH-mm");
+        console.log("ACTION: Snapshot to be created: " + rdsParams.DBSnapshotIdentifier);
+      }
       console.log("ACTION: Stopping instance " + getInstanceName(instance));
       rdsClient.stopDBInstance(rdsParams, callback);
       break;
@@ -448,6 +456,7 @@ function tagsForEachDBInstance(db) {
 
 exports.myhandler = (event, context) => {
 
+  console.log("aws-sdk version: " + aws.VERSION);
   console.log("aws-manage-lifecycles version: "+CODE_VERSION);
 
   rdsClient.describeDBInstances({}, function(err, data) {
