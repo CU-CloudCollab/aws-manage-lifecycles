@@ -1,14 +1,17 @@
 # aws-manage-lifecycles
 
-This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources requried for running the Lambda function. If you wish to customize the functionality, supplemental scripts are provided to upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.
+This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources required for running the Lambda function. If you wish to customize the functionality, supplemental scripts are provided to upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.
 
-The idea is to create one Lambda function in your AWS account that runs at 5 minutes after each hour and scans EC2 and RDS instances tagged with a lifecycle policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily on/off cycle.
+The idea is to create one Lambda function in your AWS account that runs at 1 minute after each hour and scans EC2 and RDS instances tagged with a lifecycle policy. When it finds such instances it takes action to implement the policy. E.g., starting instances to fulfill a daily on/off cycle.
 
-This functionality does not launch new instances. It can terminate EC2 instances (but not RDS instances) if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
+This functionality does not launch new instances. It can terminate EC2 instances (but not RDS or OpsWorks instances) if desired, but it operates only on instances that exist and are in a "running" or "stopped" state.
 
 When stopping RDS instances, a snapshot will be created (be default) after the instance is stopped, but this is configurable.
 
-## Lifecycle Policies
+If an EC2 instance is tagged with an OpsWorks instance ID (tag key "opsworks-instance-id", tag value e.g., 	
+67959b64-d86c-454d-8ad5-54608e2cae3d), the lambda function will start or stop the instance using OpsWorks. This is important because OpsWorks gets confused if you stop an instance using the EC2 API/console instead of the OpsWorks API/console. NOTE: You are responsible for ensuring that EC2 instances that are owned by OpsWorks are tagged with an "opsworks-instance-id". If not tagged, the lambda function will blindly use the EC2 API to stop/start instances.
+
+## Lifecycle policies
 
 Lifecycle policies are specified by tagging EC2 and RDS instances with a tag named "lifecycle-policy". Some lifecycle policies cannot be applied to RDS instance because at present there is no metadata available about RDS instances that indicate the most recent time an instance was started, or how long it has been running.
 
@@ -17,32 +20,37 @@ Lifecycle policies are specified by tagging EC2 and RDS instances with a tag nam
   * **none**
     * A policy that does nothing.
   * **limit-stop:[h]**
-    * *This policy is applicable only to EC2 instances.*
+    * *This policy is applicable only to EC2 and OpsWorks instances.*
     * Stop the instance if it is running and if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-stop:0" means to stop the instance as soon as the policy is checked.
   * **limit-terminate:[h]**
-    * *This policy is applicable only to EC2 instances.*
+    * *This policy is applicable only to EC2 and OpsWorks instances.*
     * Terminate the instance if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-terminate:0" means to terminate the instance as soon as the policy is checked.
+    * If an instance with this policy has an "opsworks-instance-id" tag, the instance will be stopped instead of terminated.
   * **limit-email:[h]/[email-address]**
-    * *This policy is applicable only to EC2 instances.*
+    * *This policy is applicable only to EC2 and OpsWorks instances.*
     * Send an email to [email-address] if more than [h] hours have elapsed since instance launch date/time.
     * The special case "limit-email:0/[email-address]" means "send the email every time the policy is checked".
   * **cycle-daily:[on-hour]/[off-hour]**
-    * *This policy is valid for EC2 and RDS instances.*
+    * *This policy is valid for EC2, OpsWorks, and RDS instances.*
     * Cycle this instance daily, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code).
     * If [on-hour] > [off-hour] then this is interpreted that the instance should be running overnight. E.g., cycle-daily:20/4 would turn on the instance at 8pm and off at 4am.
     * If [on-hour] == [off-hour], the policy is non-sensical and nothing is done.
   * **cycle-weekday:[on-hour]/[off-hour]**
-    * *This policy is valid for EC2 and RDS instances.*
+    * *This policy is valid for EC2, OpsWorks, and RDS instances.*
     * Cycle this instance on weekdays, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code). Instances remain off on weekends.
     * If [on-hour] > [off-hour], then the instance is turned on at [on-hour] on each weekday (Monday-Friday) and off at [off-hour] on Tuesday-Saturday.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
   * **cycle-weekly:[on-hour]/[off-hour]/[day]**
-    * *This policy is valid for EC2 and RDS instances.*
+    * *This policy is valid for EC2, OpsWorks, and RDS instances.*
     * Cycle this instance once per week on the specified day, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code). Day values can be 0-6 corresponding to Sunday-Saturday.
     * If [on-hour] > [off-hour], the the instance is turned on at [oh-hour] of the designated day and turned off at [off-hour] on the following day.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
+
+### OpsWorks tagging
+
+If an EC2 instance is part of an OpsWorks stack, you must ensure that the instance is tagged with the OpsWorks instance ID using tag key "opsworks-instance-id". See the [opsworks-utils-cookbook](https://github.com/CU-CommunityApps/opsworks-utils-cookbook) Chef cookbook for recipes that will help perform that tagging.
 
 ## Deploying the function to your AWS account
 
