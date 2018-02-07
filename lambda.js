@@ -1,6 +1,11 @@
 'use strict';
 
-var CODE_VERSION="1.0"
+var CODE_VERSION="1.1"
+
+// CHANGE LOG
+// Version 1.1
+// - added support for managing instances that are part of OpsWorks stacks. 
+//   Assumes that such instances are tagged with their OpsWorks instance ID
 
 // Constants used to customize the configuration of your deployment.
 // You MUST update these according to your situation.
@@ -16,6 +21,7 @@ var MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
 var POLICY_TAG_NAME = "lifecycle-policy";
 var POLICY_SYNTAX_SEPARATOR_PRIMARY = ":";
 var POLICY_SYNTAX_SEPARATOR_SECONDARY = "/";
+var OPSWORKS_INSTANCE_ID_TAG_KEY = "opsworks-instance-id";
 
 // policy names
 var POLICY_LIMIT_STOP = "limit-stop";
@@ -45,6 +51,7 @@ aws.config.region = 'us-east-1';
 var ec2Client = new aws.EC2();
 var sesClient = new aws.SES();
 var rdsClient = new aws.RDS();
+var owClient = new aws.OpsWorks();
 
 function getTagValue(targetTag, tags) {
   var result = tags.filter(function(item) {
@@ -67,6 +74,11 @@ function isEc2(instance) {
   return !isRds(instance);
 }
 
+function isOpsWorks(instance) {
+  if (instance.OpsWorksInstanceId) return true;
+  return false;
+}
+
 function getInstanceName(instance) {
   if (isRds(instance)) return instance.DBInstanceArn;        // RDS
   var result = getTagValue("Name", instance.Tags);    // EC2
@@ -81,17 +93,24 @@ function getLifeCyclePolicy(instance) {
 function checkPolicy(instance) {
   var instanceName = getInstanceName(instance);
   var policy = getLifeCyclePolicy(instance);
+  
+  // Check whether this is an OpsWorks instance
+  var opsworksInstanceId = getTagValue(OPSWORKS_INSTANCE_ID_TAG_KEY, instance.Tags);
+  
+  if (opsworksInstanceId) {
+    instance.OpsWorksInstanceId = opsworksInstanceId;
+    console.log("OpsWorksInstanceId: " + instance.OpsWorksInstanceId);
+  }    
 
   // console.log(instance);
   // console.log(instance.Tags)
   // console.log("lifecycle-policy = " + policy);
   console.log("--------------------------------");
-  if (instance.InstanceId) {
-    // EC2
+  if (isOpsWorks(instance)) {
+    console.log("OpsWorks Instance: " + instanceName + " (" + instance.OpsWorksInstanceId + ", " + instance.InstanceId + ")");
+  } else if (isEc2(instance)) {
     console.log("EC2 Instance: " + instanceName + " (" + instance.InstanceId + ")");
-  }
-  else {
-    // RDS
+  } else if (isRds(instance)) {
     console.log("RDS Instance: " + instanceName);
   }
 
@@ -408,15 +427,28 @@ function takeActionEc2(ec2Client, sesClient, instance, action) {
       break;
     case ACTION_START:
       console.log("ACTION: Starting instance " + getInstanceName(instance));
-      ec2Client.startInstances(ec2Params, callback);
+      if (isOpsWorks(instance)) {
+        owClient.startInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
+      } else {
+        ec2Client.startInstances(ec2Params, callback);
+      }
       break;
     case ACTION_STOP:
       console.log("ACTION: Stopping instance " + getInstanceName(instance));
-      ec2Client.stopInstances(ec2Params, callback);
+      if (isOpsWorks(instance)) {
+        owClient.stopInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
+      } else {
+        ec2Client.stopInstances(ec2Params, callback);
+      }
       break;
     case ACTION_TERMINATE:
-      console.log("ACTION: Terminating instance " + getInstanceName(instance));
-      ec2Client.terminateInstances(ec2Params, callback);
+      if (isOpsWorks(instance)) {
+        console.log("ACTION: TERMINATION was specified in lifecycle policy, but am STOPPING instance instead since it belongs to OpsWorks");      
+        owClient.stopInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
+      } else {      
+        console.log("ACTION: Terminating instance " + getInstanceName(instance));        
+        ec2Client.terminateInstances(ec2Params, callback);
+      }
       break;
     case ACTION_NONE:
       console.log("ACTION: None; nothing to do");
@@ -457,7 +489,11 @@ function tagsForEachDBInstance(db) {
 exports.myhandler = (event, context) => {
 
   console.log("aws-sdk version: " + aws.VERSION);
-  console.log("aws-manage-lifecycles version: "+CODE_VERSION);
+  console.log("aws-manage-lifecycles version: " + CODE_VERSION);
+  console.log ("EMAIL_FROM_ADDRESS : " + process.env.EMAIL_FROM_ADDRESS);
+  console.log ("MOMENT_TIMEZONE : " + process.env.MOMENT_TIMEZONE);
+  console.log ("EC2_DRY_RUN : " + process.env.EC2_DRY_RUN);
+  console.log ("SNAPSHOT_ON_RDS_STOP : " + process.env.SNAPSHOT_ON_RDS_STOP);
 
   rdsClient.describeDBInstances({}, function(err, data) {
     if (err) console.log(err, err.stack); // an error occurred
