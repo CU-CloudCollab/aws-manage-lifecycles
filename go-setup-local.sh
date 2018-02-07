@@ -4,4 +4,4 @@
 
 npm install aws-sdk
 npm install moment
-npm install momemt-timezone
+npm install moment-timezone
