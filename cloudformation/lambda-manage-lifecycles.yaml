@@ -24,7 +24,7 @@ Parameters:
     Description: This is the S3 bucket where the deployment package (.zip file) can be retrieved by Lambda.
   CodeS3KeyParam:
     Type: String
-    Default: examples/aws-manage-lifecycles/lambda-code.v1_1.zip
+    Default: examples/aws-manage-lifecycles/lambda-code.v1_2.zip
     Description: This is the key within the S3 bucket where the deployment package (.zip file) can be retrieved by Lambda.
   DryRunEc2Param:
     Type: String
@@ -130,7 +130,7 @@ Resources:
       # KmsKeyArn: String
       MemorySize: 128
       Role: !GetAtt LambdaRole.Arn
-      Runtime: nodejs8.10
+      Runtime: nodejs10.x
       Timeout: 300
       # TracingConfig:
       #   TracingConfig

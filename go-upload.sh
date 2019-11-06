@@ -6,7 +6,7 @@
 source ./constants.sh
 
 # zip contents
-zip -qr lambda-code.zip lambda.js node_modules/moment-timezone node_modules/moment node_modules/aws-sdk
+zip -qr lambda-code.zip lambda.js node_modules/*
 # zip -qr lambda-code.zip lambda.js node_modules/node-json2html node_modules/node-rest-client
 
 # load to S3

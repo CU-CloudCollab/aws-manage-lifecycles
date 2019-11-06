@@ -89,7 +89,7 @@ These instructions will get you setup to customize and deploy your custom versio
       1. [moment](http://momentjs.com/)
       1. [moment-timezone](http://momentjs.com/timezone/)
   * If you want to install/use Node.js directly on your workstation.
-    1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 4 .3.2.
+    1. Install [Node.js](https://nodejs.org/en/). This code was targeted against Lambda support for Node.js 10.16.3.
     1. Install [npm](https://www.npmjs.com/).
     1. Run the [go-setup-local.sh](go-setup-local.sh) script to install the following Javascript libraries (npm modules):
       1. [aws-sdk](https://www.npmjs.com/package/aws-sdk)
