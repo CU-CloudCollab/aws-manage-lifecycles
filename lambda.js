@@ -1,8 +1,15 @@
 'use strict';
 
-var CODE_VERSION="1.1"
+var CODE_VERSION="1.3"
 
 // CHANGE LOG
+
+// Version 1.3
+// - added support for "always-on" and "always-off" policies.
+// - added validation to ensure that an EC2 instance that was part of an 
+//   OpsWorks stack was NOT acted upon unless it has a 'opsworks-instance-id' 
+//   tag.
+
 // Version 1.1
 // - added support for managing instances that are part of OpsWorks stacks. 
 //   Assumes that such instances are tagged with their OpsWorks instance ID
@@ -22,6 +29,12 @@ var POLICY_TAG_NAME = "lifecycle-policy";
 var POLICY_SYNTAX_SEPARATOR_PRIMARY = ":";
 var POLICY_SYNTAX_SEPARATOR_SECONDARY = "/";
 var OPSWORKS_INSTANCE_ID_TAG_KEY = "opsworks-instance-id";
+
+// This is a tag that OpsWorks adds to it's EC2 instances.
+// We use this to ensure that we aren't accidentally 
+// turning on/off an EC2 instance that doesn't have the 
+// OPSWORKS_INSTANCE_ID_TAG_KEY key set. 
+var OPSWORKS_VALIDATION_KEY = "opsworks:stack";
 
 // policy names
 var POLICY_LIMIT_STOP = "limit-stop";
@@ -76,7 +89,12 @@ function isEc2(instance) {
   return !isRds(instance);
 }
 
-function isOpsWorks(instance) {
+function isPartOfOpsWorks(instance) {
+  if (instance.OpsWorksStack) return true;
+  return false;
+}
+
+function hasOpsWorksInstanceIdTag(instance) {
   if (instance.OpsWorksInstanceId) return true;
   return false;
 }
@@ -98,17 +116,22 @@ function checkPolicy(instance) {
   
   // Check whether this is an OpsWorks instance
   var opsworksInstanceId = getTagValue(OPSWORKS_INSTANCE_ID_TAG_KEY, instance.Tags);
-  
   if (opsworksInstanceId) {
     instance.OpsWorksInstanceId = opsworksInstanceId;
     console.log("OpsWorksInstanceId: " + instance.OpsWorksInstanceId);
-  }    
+  }
+
+  var opsworksValidation = getTagValue(OPSWORKS_VALIDATION_KEY, instance.Tags);
+  if (opsworksValidation) {
+    instance.OpsWorksStack = opsworksValidation;
+    console.log("OpsWorksStack: " + instance.OpsWorksStack);
+  }
 
   // console.log(instance);
   // console.log(instance.Tags)
   // console.log("lifecycle-policy = " + policy);
   console.log("--------------------------------");
-  if (isOpsWorks(instance)) {
+  if (hasOpsWorksInstanceIdTag(instance)) {
     console.log("OpsWorks Instance: " + instanceName + " (" + instance.OpsWorksInstanceId + ", " + instance.InstanceId + ")");
   } else if (isEc2(instance)) {
     console.log("EC2 Instance: " + instanceName + " (" + instance.InstanceId + ")");
@@ -453,13 +476,25 @@ function takeActionEc2(ec2Client, sesClient, instance, action) {
   };
 
   switch (action) {
+    case ACTION_START:
+    case ACTION_STOP:
+    case ACTION_TERMINATE:
+      if (isPartOfOpsWorks(instance) && !hasOpsWorksInstanceIdTag(instance)) {
+        console.log("WARNING: Instance "+ getInstanceName(instance) + " is managed by OpsWorks, but does not have an 'opsworks-instance-id' tag so ACTION has been overridden to NONE.");
+        action = ACTION_NONE;
+      }
+    default:
+      break;
+  }
+
+  switch (action) {
     case ACTION_EMAIL:
       console.log("ACTION: Sending email to " + instance.lifecycleEmail + " about " + getInstanceName(instance));
       sesClient.sendEmail(sesParams, callback);
       break;
     case ACTION_START:
       console.log("ACTION: Starting instance " + getInstanceName(instance));
-      if (isOpsWorks(instance)) {
+      if (hasOpsWorksInstanceIdTag(instance)) {
         owClient.startInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
       } else {
         ec2Client.startInstances(ec2Params, callback);
@@ -467,14 +502,14 @@ function takeActionEc2(ec2Client, sesClient, instance, action) {
       break;
     case ACTION_STOP:
       console.log("ACTION: Stopping instance " + getInstanceName(instance));
-      if (isOpsWorks(instance)) {
+      if (hasOpsWorksInstanceIdTag(instance)) {
         owClient.stopInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
       } else {
         ec2Client.stopInstances(ec2Params, callback);
       }
       break;
     case ACTION_TERMINATE:
-      if (isOpsWorks(instance)) {
+      if (hasOpsWorksInstanceIdTag(instance)) {
         console.log("ACTION: TERMINATION was specified in lifecycle policy, but am STOPPING instance instead since it belongs to OpsWorks");      
         owClient.stopInstance({ InstanceId: instance.OpsWorksInstanceId }, callback);
       } else {      

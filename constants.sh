@@ -13,7 +13,7 @@ export S3_BUCKET="public.cloud.cit.cornell.edu"
 export LAMBDA_NAME="lambda-manage-lifecycle"
 
 # Arbitrary name of the ZIP file to upload.
-export CODE_ZIPFILE="lambda-code.v1_1.zip"
+export CODE_ZIPFILE="lambda-code.v1_3.zip"
 
 # Prefix of S3 key for the CODE_ZIPFILE
 export S3_KEY_PREFIX="examples/aws-manage-lifecycles/"
@@ -23,3 +23,4 @@ export S3_KEY_PREFIX="examples/aws-manage-lifecycles/"
 export EMAIL_FROM_ADDRESS="me@example.com"
 export MOMENT_TIMEZONE="America/New_York"
 export EC2_DRY_RUN="false" # RDS does not have a dry_run option.
+export SNAPSHOT_ON_RDS_STOP="false"
