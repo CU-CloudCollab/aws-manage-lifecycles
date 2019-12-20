@@ -31,6 +31,8 @@ var POLICY_CYCLE_DAILY = "cycle-daily";
 var POLICY_CYCLE_WEEKDAY = "cycle-weekday";
 var POLICY_CYCLE_WEEKLY = "cycle-weekly";
 var POLICY_NONE = "none";
+var POLICY_ALWAYS_ON = "always-on";
+var POLICY_ALWAYS_OFF = "always-off";
 
 // possible actions
 var ACTION_ERROR = "error";
@@ -146,6 +148,12 @@ function checkPolicy(instance) {
     case POLICY_NONE:
       response = ACTION_NONE;
       break;
+    case POLICY_ALWAYS_OFF:
+      response = checkPolicyAlwaysOnOff(instance, policyName);
+      break;
+    case POLICY_ALWAYS_ON:
+      response = checkPolicyAlwaysOnOff(instance, policyName);
+      break;
     default:
       response = checkPolicyDummy(instance, policyName, policyParms)
       //
@@ -156,6 +164,30 @@ function checkPolicy(instance) {
 function checkPolicyDummy(instance, policyName, policyParms) {
   console.log("The '" + policyName + "' policy is not yet implemented.");
   return ACTION_ERROR;
+}
+
+function checkPolicyAlwaysOnOff(instance, policyName) {
+  
+  var response = ACTION_NONE;
+  if (isInstanceRunning(instance)) {
+    if (policyName == POLICY_ALWAYS_OFF) {
+      console.log("Instance should be turned OFF.")
+      response = ACTION_STOP;
+    }
+  }
+  else {
+    // not running
+    if (policyName == POLICY_ALWAYS_ON) {
+      if (isInstanceStartable(instance)) {
+        response = ACTION_START;
+        console.log("Instance should be turned ON.")
+      }
+      else {
+        console.log("Instance should be turned ON, but is not in a startable state.")
+      }
+    }
+  }
+  return response;
 }
 
 function checkPolicyCycle(instance, policyName, policyParms) {

@@ -47,6 +47,12 @@ Lifecycle policies are specified by tagging EC2 and RDS instances with a tag nam
     * Cycle this instance once per week on the specified day, turning it on at [on-hour] and off at [off-hour]. Hour values are 0-23 and are relative to the local time of the AWS region (as long as that has been set in the Lambda function code). Day values can be 0-6 corresponding to Sunday-Saturday.
     * If [on-hour] > [off-hour], the the instance is turned on at [oh-hour] of the designated day and turned off at [off-hour] on the following day.
     * If [on-hour] == [off-hour], the policy is nonsensical and nothing is done.
+  * **always-on**
+    *  *This policy is valid for EC2, OpsWorks, and RDS instances.*
+    *  If the instance is not running, start it.
+  * **always-off**
+    *  *This policy is valid for EC2, OpsWorks, and RDS instances.*
+    *  If the instance is running, stop it.
 
 ### OpsWorks tagging
 
