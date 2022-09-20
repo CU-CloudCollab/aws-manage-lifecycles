@@ -130,7 +130,7 @@ Resources:
       # KmsKeyArn: String
       MemorySize: 128
       Role: !GetAtt LambdaRole.Arn
-      Runtime: nodejs10.x
+      Runtime: nodejs16.x
       Timeout: 300
       # TracingConfig:
       #   TracingConfig
