@@ -1,10 +1,14 @@
 {
   "name": "aws-manage-lifecycles",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "This repo contains Node.js functionality to manage lifecycles of AWS EC2 and RDS instances using policies specified in tags. A CloudFormation template creates all of the resources required for running the Lambda function. If you wish to customize the functionality, supplemental scripts are provided to upload the code to an S3 bucket, update the Lambda function with new code, and invokes the Lambda functionally.",
   "main": "lambda.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "16.x",
+    "npm": "8.x"
   },
   "repository": {
     "type": "git",
@@ -17,8 +21,8 @@
   },
   "homepage": "https://github.com/CU-CloudCollab/aws-manage-lifecycles#readme",
   "dependencies": {
-    "aws-sdk": "^2.814.0",
-    "moment": "^2.24.0",
-    "moment-timezone": "^0.5.27"
+    "aws-sdk": "^2.1219.0",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.37"
   }
 }
